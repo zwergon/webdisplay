@@ -1,0 +1,26 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0", "setuptools_scm>=8"]
+
+[project]
+description = "Un toolkit pour vite coder un modèle pytorch d'IA utilisant MLflow"
+dynamic = ["version"]
+name = "webdisplay"
+
+authors = [{ name = "Jean-François Lecomte", email = "zwergon@free.fr" }]
+
+license = { text = "Apache-2.0" }
+
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+version_scheme = "no-guess-dev"
+write_to = "webdisplay/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
