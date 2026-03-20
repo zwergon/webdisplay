@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebDisplay</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0d0f11;
+      --surface: #141618;
+      --border: #232628;
+      --accent: #4af0a0;
+      --accent2: #1aff8c;
+      --dim: #3a4040;
+      --text: #c8d0cc;
+      --text-dim: #556060;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+      --radius: 6px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ─────────────────────────────────────── */
+    body {
+      display: grid;
+      grid-template-rows: 48px 1fr;
+      grid-template-columns: 260px 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Top bar ─────────────────────────────────────── */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: .04em;
+    }
+
+    .logo span {
+      color: var(--text-dim);
+    }
+
+    #status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--dim);
+      transition: background .3s;
+      flex-shrink: 0;
+    }
+
+    #status-dot.connected {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    #status-dot.reconnecting {
+      background: #f0a04a;
+      box-shadow: 0 0 6px #f0a04a;
+      animation: blink .8s ease-in-out infinite;
+    }
+
+    #status-dot.error {
+      background: #f04a4a;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .3
+      }
+    }
+
+    #status-text {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    #counter {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    #ws-url-input {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 4px 10px;
+      width: 220px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    #ws-url-input:focus {
+      border-color: var(--accent);
+    }
+
+    button {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: none;
+      border: 1px solid var(--dim);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    aside {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    aside h2 {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--text-dim);
+      padding: 4px 8px 8px;
+    }
+
+    .thumb-item {
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color .15s, opacity .15s;
+      flex-shrink: 0;
+    }
+
+    .thumb-item:hover {
+      border-color: var(--dim);
+    }
+
+    .thumb-item.active {
+      border-color: var(--accent);
+    }
+
+    .thumb-item img {
+      width: 100%;
+      display: block;
+      border-radius: 4px;
+    }
+
+    .thumb-meta {
+      padding: 4px 8px 6px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      overflow: hidden;
+    }
+
+    .thumb-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      color: var(--text);
+    }
+
+    /* ── Main viewer ─────────────────────────────────── */
+    main {
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 1fr 36px;
+      background: var(--bg);
+    }
+
+    #viewer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 24px;
+      position: relative;
+    }
+
+    #viewer img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+      display: none;
+      transition: opacity .25s;
+    }
+
+    #viewer img.visible {
+      display: block;
+    }
+
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 12px;
+      text-align: center;
+      line-height: 2;
+    }
+
+    #empty-state .big {
+      font-size: 32px;
+      letter-spacing: .05em;
+      color: var(--dim);
+    }
+
+    /* flash on new image */
+    @keyframes flash {
+      0% {
+        opacity: .7
+      }
+
+      100% {
+        opacity: 1
+      }
+    }
+
+    .flash {
+      animation: flash .3s ease-out;
+    }
+
+    /* ── Status bar ──────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 20px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    #img-info {
+      flex: 1;
+    }
+
+    #img-time {}
+
+    /* ── Scrollbar ───────────────────────────────────── */
+    aside::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    aside::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    aside::-webkit-scrollbar-thumb {
+      background: var(--dim);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">web<span>/</span>display</div>
+    <div id="status-dot"></div>
+    <div id="status-text">déconnecté</div>
+    <div class="spacer"></div>
+    <div id="counter">0 image(s)</div>
+    <input id="ws-url-input" type="text" value="ws://localhost:8765/view" spellcheck="false">
+    <button id="connect-btn" onclick="toggleConnection()">Connecter</button>
+    <button id="clear-btn" onclick="clearHistory()">Effacer</button>
+  </header>
+
+  <aside>
+    <h2>Historique</h2>
+    <div id="thumb-list"></div>
+  </aside>
+
+  <main>
+    <div id="viewer">
+      <div id="empty-state">
+        <div class="big">⬡</div>
+        <div>En attente d'images…</div>
+        <div>Connectez-vous au relay, puis lancez<br>votre script Python.</div>
+      </div>
+      <img id="main-img" alt="image reçue">
+    </div>
+    <footer>
+      <span id="img-info">—</span>
+      <span id="img-time">—</span>
+    </footer>
+  </main>
+
+  <script>
+    let ws = null;
+    let images = [];   // {title, data, time, size}
+    let current = -1;
+
+    // ── WebSocket ──────────────────────────────────────────────────────────────
+
+    function toggleConnection() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      } else {
+        connect();
+      }
+    }
+
+    function connect() {
+      const url = document.getElementById('ws-url-input').value.trim();
+      setStatus('reconnecting', 'connexion…');
+      document.getElementById('connect-btn').textContent = 'Annuler';
+
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        setStatus('error', 'URL invalide');
+        return;
+      }
+
+      ws.addEventListener('open', () => {
+        setStatus('connected', 'connecté · ' + url.replace('ws://', ''));
+        document.getElementById('connect-btn').textContent = 'Déconnecter';
+      });
+
+      ws.addEventListener('message', onMessage);
+
+      ws.addEventListener('close', () => {
+        setStatus('', 'déconnecté');
+        document.getElementById('connect-btn').textContent = 'Connecter';
+      });
+
+      ws.addEventListener('error', () => {
+        setStatus('error', 'erreur de connexion');
+      });
+    }
+
+    function setStatus(cls, text) {
+      const dot = document.getElementById('status-dot');
+      const txt = document.getElementById('status-text');
+      dot.className = cls;
+      txt.textContent = text;
+    }
+
+    // ── Messages ───────────────────────────────────────────────────────────────
+
+    function onMessage(event) {
+      let payload;
+      try { payload = JSON.parse(event.data); } catch (e) { return; }
+
+      const { title = '', data } = payload;
+      if (!data) return;
+
+      const entry = {
+        title: title || ('image-' + (images.length + 1)),
+        data,
+        time: new Date().toLocaleTimeString('fr-FR'),
+        // taille approximative en ko
+        size: Math.round(data.length * 0.75 / 1024) + ' ko'
+      };
+      images.push(entry);
+
+      addThumb(entry, images.length - 1);
+      showImage(images.length - 1);
+      document.getElementById('counter').textContent = images.length + ' image(s)';
+    }
+
+    // ── Thumbnails ─────────────────────────────────────────────────────────────
+
+    function addThumb(entry, idx) {
+      const list = document.getElementById('thumb-list');
+
+      const item = document.createElement('div');
+      item.className = 'thumb-item';
+      item.dataset.idx = idx;
+      item.onclick = () => showImage(idx);
+
+      const img = document.createElement('img');
+      img.src = 'data:image/png;base64,' + entry.data;
+      img.alt = entry.title;
+
+      const meta = document.createElement('div');
+      meta.className = 'thumb-meta';
+      meta.innerHTML = `
+      <span class="thumb-title">${escHtml(entry.title)}</span>
+      <span>${entry.time}</span>
+    `;
+
+      item.appendChild(img);
+      item.appendChild(meta);
+      list.appendChild(item);
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Viewer ──────────────────────────────────────────────────────────────────
+
+    function showImage(idx) {
+      if (idx < 0 || idx >= images.length) return;
+      current = idx;
+
+      const entry = images[idx];
+      const mainImg = document.getElementById('main-img');
+      const empty = document.getElementById('empty-state');
+
+      mainImg.src = 'data:image/png;base64,' + entry.data;
+      mainImg.classList.add('visible');
+      mainImg.classList.remove('flash');
+      void mainImg.offsetWidth; // reflow
+      mainImg.classList.add('flash');
+      empty.style.display = 'none';
+
+      document.getElementById('img-info').textContent =
+        `${entry.title}  ·  ${entry.size}`;
+      document.getElementById('img-time').textContent = entry.time;
+
+      // Mise à jour de la sélection dans la sidebar
+      document.querySelectorAll('.thumb-item').forEach(el => {
+        el.classList.toggle('active', parseInt(el.dataset.idx) === idx);
+      });
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') showImage(current - 1);
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') showImage(current + 1);
+    });
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    function escHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ── Clear history ──────────────────────────────────────────────────────────
+
+    function clearHistory() {
+      images = [];
+      current = -1;
+      document.getElementById('thumb-list').innerHTML = '';
+      document.getElementById('counter').textContent = '0 image(s)';
+
+      const mainImg = document.getElementById('main-img');
+      mainImg.src = '';
+      mainImg.classList.remove('visible');
+      document.getElementById('empty-state').style.display = '';
+      document.getElementById('img-info').textContent = '—';
+      document.getElementById('img-time').textContent = '—';
+    }
+
+    // Auto-connect au chargement
+    connect();
+  </script>
+</body>
+
+</html>
