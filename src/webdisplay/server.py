@@ -1,19 +1,3 @@
-#!/usr/bin/env python3
-"""
-webdisplay_launch.py —  ouvre le navigateur.
-
-Usage direct :
-    python webdisplay_launch.py [--port 8765]
-
-Ou comme module dans un script :
-    import webdisplay_launch
-    webdisplay_launch.start()          # bloquant (attend Ctrl+C)
-    webdisplay_launch.start_background()  # non bloquant
-
-Les trois fichiers (relay.py, index.html, webdisplay_launch.py)
-doivent se trouver dans le même dossier.
-"""
-
 import argparse
 import pathlib
 import time
@@ -80,8 +64,6 @@ async def _relay(port: int):
 HERE = pathlib.Path(__file__).parent.resolve()
 HTML_FILE = HERE / "static" / "index.html"
 
-
-# ── Lancement navigateur ──────────────────────────────────────────────────────
 
 def _open_browser(host: str, port: int, delay: float = 0.8):
     """Ouvre index.html après un court délai (le temps que le relay démarre)."""

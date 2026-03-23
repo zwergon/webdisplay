@@ -46,6 +46,13 @@ def connect(uri: str = "ws://localhost:8765/send"):
     _uri = uri
     _ensure_started()
 
+    future = asyncio.run_coroutine_threadsafe(_connect(), _loop)
+    try:
+        future.result(timeout=5)
+    except Exception as e:
+        raise RuntimeError(
+            f"Webdisplay: impossible de se connecter à {uri}") from e
+
 
 def close():
     """Ferme proprement la connexion."""
@@ -99,14 +106,15 @@ def _ensure_started():
         _loop = asyncio.new_event_loop()
         _thread = threading.Thread(target=_loop.run_forever, daemon=True)
         _thread.start()
-        # connexion initiale
-        future = asyncio.run_coroutine_threadsafe(_connect(), _loop)
-        future.result(timeout=10)
 
 
 async def _connect():
     global _ws
-    _ws = await websockets.connect(_uri)
+    try:
+        _ws = await websockets.connect(_uri)
+    except Exception as e:
+        _ws = None
+        raise ConnectionError(f"Impossible de se connecter à {_uri}") from e
 
 
 async def _send(payload: str):
